@@ -98,13 +98,32 @@ export default function FarmatodoForm() {
       });
 
     } catch (error) {
-      console.error('Error en la transacción:', error);
+      console.error('Error detallado de Supabase:', error);
+      
+      // El código '23505' es la respuesta oficial de la base de datos cuando se viola una regla UNIQUE
       if (error.code === '23505') { 
-        alert('Error: Ya existe un alumno registrado con esta Cédula, RIF o Correo Electrónico.');
+        
+        // Supabase nos dice en el mensaje qué campo fue el duplicado. Lo buscamos para dar un mensaje exacto:
+        if (error.message.includes('cedula_unica') || error.message.includes('cedula')) {
+          alert(`⚠️ Error: Ya existe una solicitud registrada con la Cédula: ${formData.cedula}.`);
+        } 
+        else if (error.message.includes('rif_unico') || error.message.includes('rif')) {
+          alert(`⚠️ Error: El RIF ${formData.rif} ya está registrado en nuestro sistema.`);
+        }
+        else if (error.message.includes('correo_unico') || error.message.includes('correo')) {
+          alert(`⚠️ Error: El correo electrónico ${formData.correo} ya fue utilizado por otro estudiante.`);
+        } 
+        else {
+          alert('⚠️ Error: Ya existe un registro con estos datos personales (Cédula, RIF o Correo).');
+        }
+        
       } else {
-        alert(`Ocurrió un error al guardar los datos: ${error.message || error}`);
+        // Si el error es otra cosa (como falla de internet)
+        alert(`❌ Ocurrió un error de conexión al guardar los datos: ${error.message || 'Inténtalo de nuevo.'}`);
       }
+      
     } finally {
+      // Siempre volvemos a habilitar el botón al terminar
       setLoading(false);
     }
   };

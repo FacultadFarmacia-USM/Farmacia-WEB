@@ -1,42 +1,124 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+
 export default function ActivityTable() {
-  const students = [
-    { name: "Sarah Jenkins", stage: "Prácticas 1", status: "Aprobado", statusColor: "bg-secondary-container/30 text-on-secondary-container", date: "Oct 24, 2024" },
-    { name: "Michael Chen", stage: "Registro", status: "Pendiente", statusColor: "bg-surface-variant text-on-surface", date: "Oct 23, 2024" },
-    { name: "Emily Rodriguez", stage: "Prácticas 2", status: "Aprobado", statusColor: "bg-secondary-container/30 text-on-secondary-container", date: "Oct 22, 2024" },
-    { name: "David Kim", stage: "Prácticas 1", status: "Acción Requerida", statusColor: "bg-error-container/50 text-on-error-container", date: "Oct 21, 2024" },
-  ];
+  const [estudiantesRecientes, setEstudiantesRecientes] = useState([]);
+  const [cargandoActividad, setCargandoActividad] = useState(true);
+
+  const obtenerActividadReciente = async () => {
+    try {
+      setCargandoActividad(true);
+      const { data, error } = await supabase
+        .from('estudiantes')
+        .select('nombres, apellidos, etapa, estado, creado_en')
+        .order('creado_en', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setEstudiantesRecientes(data);
+    } catch (error) {
+      console.error('Error al obtener actividad reciente:', error);
+    } finally {
+      setCargandoActividad(false);
+    }
+  };
+
+  useEffect(() => {
+    obtenerActividadReciente();
+  }, []);
+
+  // Función para poner la fecha bonita (ej. 24 oct 2026)
+  const formatearFecha = (fechaISO) => {
+    if (!fechaISO) return 'N/A';
+    const fecha = new Date(fechaISO);
+    return fecha.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col h-full">
-      <div className="p-6 border-b border-outline-variant flex justify-between items-center">
-        <h2 className="font-title-lg text-lg font-semibold text-primary">Actividad Reciente de Estudiantes</h2>
-        <button className="text-secondary font-label-md text-sm hover:underline">Ver Todo</button>
+    <div className="bg-surface-container-low rounded-xl p-4 border border-outline-variant h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-semibold text-on-surface uppercase tracking-wider">
+          Actividad Reciente de Estudiantes
+        </h3>
+        <button 
+          onClick={obtenerActividadReciente} 
+          disabled={cargandoActividad}
+          className="text-xs text-primary font-medium hover:bg-surface-container-high px-2 py-1 rounded transition-colors flex items-center gap-1 disabled:opacity-50"
+        >
+          <span className={`material-symbols-outlined text-[16px] ${cargandoActividad ? 'animate-spin' : ''}`}>refresh</span> 
+          Actualizar
+        </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+
+      <div className="overflow-x-auto flex-1">
+        <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-outline-variant bg-surface/50">
-              <th className="py-3 px-6 font-label-md text-xs text-on-surface-variant uppercase tracking-wider">NOMBRE DEL ESTUDIANTE</th>
-              <th className="py-3 px-6 font-label-md text-xs text-on-surface-variant uppercase tracking-wider">ETAPA DEL PROGRAMA</th>
-              <th className="py-3 px-6 font-label-md text-xs text-on-surface-variant uppercase tracking-wider">ESTADO</th>
-              <th className="py-3 px-6 font-label-md text-xs text-on-surface-variant uppercase tracking-wider">FECHA</th>
+            <tr className="text-xs text-on-surface-variant border-b border-outline-variant uppercase bg-surface-container-high/50">
+              <th className="py-2 px-3">Nombre del Estudiante</th>
+              <th className="py-2 px-3">Etapa del Programa</th>
+              <th className="py-2 px-3">Fecha de Registro</th> {/* NUEVA COLUMNA */}
+              <th className="py-2 px-3 text-right">Estado</th>
             </tr>
           </thead>
-          <tbody className="font-body-md text-sm divide-y divide-outline-variant">
-            {students.map((student, index) => (
-              <tr key={index} className="hover:bg-surface-container-low transition-colors">
-                <td className="py-4 px-6 text-primary font-medium">{student.name}</td>
-                <td className="py-4 px-6 text-on-surface-variant">{student.stage}</td>
-                <td className="py-4 px-6">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.statusColor}`}>
-                    {student.status}
-                  </span>
+          <tbody>
+            {cargandoActividad ? (
+              <tr>
+                <td colSpan="4" className="text-center py-8 text-xs text-on-surface-variant"> {/* Cambiado a colSpan="4" */}
+                  <div className="flex flex-col items-center justify-center gap-2 animate-pulse">
+                    <span className="material-symbols-outlined text-2xl">sync</span>
+                    Cargando registros reales...
+                  </div>
                 </td>
-                <td className="py-4 px-6 text-on-surface-variant text-sm">{student.date}</td>
               </tr>
-            ))}
+            ) : estudiantesRecientes.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="text-center py-8 text-xs text-on-surface-variant"> {/* Cambiado a colSpan="4" */}
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-2xl">inbox</span>
+                    No hay estudiantes registrados en el sistema aún.
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              estudiantesRecientes.map((estudiante, index) => (
+                <tr key={index} className="border-b border-outline-variant/50 hover:bg-surface-container-high/30 transition-colors">
+                  <td className="py-3 px-3 font-medium text-on-surface flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-[10px] font-bold">
+                      {estudiante.nombres.charAt(0)}{estudiante.apellidos.charAt(0)}
+                    </div>
+                    {estudiante.nombres} {estudiante.apellidos}
+                  </td>
+                  
+                  <td className="py-3 px-3 text-on-surface-variant">
+                    {estudiante.etapa || 'Pasantía 1'}
+                  </td>
+
+                  {/* NUEVA CELDA: Fecha formateada */}
+                  <td className="py-3 px-3 text-on-surface-variant text-xs capitalize">
+                    {formatearFecha(estudiante.creado_en)}
+                  </td>
+                  
+                  <td className="py-3 px-3 text-right">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      estudiante.estado === 'Activo' || !estudiante.estado
+                        ? 'bg-success-container text-on-success-container' 
+                        : 'bg-error-container text-on-error-container'
+                    }`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                      {estudiante.estado || 'Activo'}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
+      </div>
+      
+      <div className="mt-4 pt-4 border-t border-outline-variant text-center">
+        <button className="text-xs text-primary font-medium hover:underline">
+          Ver todos los registros
+        </button>
       </div>
     </div>
   );
