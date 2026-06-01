@@ -1,10 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Cliente normal para todos los usuarios (El que ya tienes)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-console.log("🔍 URL cargada:", supabaseUrl ? "Sí, detectada" : "Falta URL");
-console.log("🔑 Llave cargada:", supabaseAnonKey ? "Sí, detectada" : "Falta Llave");
-console.log("✅ Cliente Supabase listo:", supabase);
+// NUEVO: Cliente con poderes de Administrador (Solo para crear usuarios)
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false // Evita que cierre la sesión del Super Admin
+  }
+});

@@ -16,7 +16,8 @@ export default function FarmatodoForm() {
     estado: '', // Estado geográfico (Ej. Miranda)
     farmatodoOpcion1: '',
     farmatodoOpcion2: '',
-    empleadoActivo: ''
+    empleadoActivo: '',
+    cuenta_mercantil: '' // CORRECCIÓN 1: Inicializar el campo en el estado
   });
 
   const [loading, setLoading] = useState(false);
@@ -61,7 +62,8 @@ export default function FarmatodoForm() {
         .insert([
           {
             id_estudiante: estudianteCreado.id_estudiante,
-            ciudad: formData.ciudad
+            ciudad: formData.ciudad,
+            cuenta_mercantil: formData.cuenta_mercantil // CORRECCIÓN 2: Enviar el dato a Supabase
           }
         ])
         .select()
@@ -94,16 +96,14 @@ export default function FarmatodoForm() {
       setFormData({
         nombres: '', apellidos: '', fechaNacimiento: '', cedula: '', rif: '',
         correo: '', telefono: '', direccion: '', ciudad: '', estado: '',
-        farmatodoOpcion1: '', farmatodoOpcion2: '', empleadoActivo: ''
+        farmatodoOpcion1: '', farmatodoOpcion2: '', empleadoActivo: '',
+        cuenta_mercantil: '' // CORRECCIÓN 3: Limpiar el campo tras un envío exitoso
       });
 
     } catch (error) {
       console.error('Error detallado de Supabase:', error);
       
-      // El código '23505' es la respuesta oficial de la base de datos cuando se viola una regla UNIQUE
       if (error.code === '23505') { 
-        
-        // Supabase nos dice en el mensaje qué campo fue el duplicado. Lo buscamos para dar un mensaje exacto:
         if (error.message.includes('cedula_unica') || error.message.includes('cedula')) {
           alert(`⚠️ Error: Ya existe una solicitud registrada con la Cédula: ${formData.cedula}.`);
         } 
@@ -118,17 +118,14 @@ export default function FarmatodoForm() {
         }
         
       } else {
-        // Si el error es otra cosa (como falla de internet)
         alert(`❌ Ocurrió un error de conexión al guardar los datos: ${error.message || 'Inténtalo de nuevo.'}`);
       }
       
     } finally {
-      // Siempre volvemos a habilitar el botón al terminar
       setLoading(false);
     }
   };
 
-  // 4. Tu espectacular interfaz visual limpia y corregida
   return (
     <div className="min-h-screen bg-background text-on-background font-body-md antialiased flex items-center justify-center p-4 md:p-8 relative medical-grid">
       <div className="max-w-3xl w-full bg-surface-container-lowest rounded-xl border border-outline-variant p-6 md:p-8 shadow-lg relative z-10 my-8">
@@ -272,6 +269,22 @@ export default function FarmatodoForm() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* CORRECCIÓN 4: Vinculación correcta del input con las variables formData y handleChange */}
+          <div className="flex flex-col gap-1">
+            <label className="block text-xs font-medium text-on-surface-variant mb-1">
+              ¿Posee Cuenta Corriente Mercantil? (Opcional)
+            </label>
+            <input 
+              type="text" 
+              name="cuenta_mercantil" 
+              maxLength="20" 
+              placeholder="Ingrese su número de cuenta de 20 dígitos (si posee)" 
+              value={formData.cuenta_mercantil} 
+              onChange={handleChange} 
+              className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm" 
+            />
           </div>
 
           {/* Botón de Envío Dinámico */}

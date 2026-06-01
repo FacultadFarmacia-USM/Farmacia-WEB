@@ -1,6 +1,7 @@
 import React from 'react';
 
-export default function Sidebar({ currentView, setCurrentView }) {
+// IMPORTANTE: Asegúrate de que ahora recibimos 'perfil' aquí arriba
+export default function Sidebar({ currentView, setCurrentView, perfil }) {
   return (
     <aside className="w-64 bg-surface-container-lowest border-r border-outline-variant flex-col justify-between hidden md:flex z-10 relative h-screen">
       <div className="p-gutter pt-6">
@@ -71,6 +72,30 @@ export default function Sidebar({ currentView, setCurrentView }) {
             <span className="material-symbols-outlined" style={currentView === 'formularios' ? { fontVariationSettings: "'FILL' 1" } : {}}>description</span> 
             Formularios
           </button>
+
+          {/* --- NUEVO BOTÓN: AGREGAR USUARIO (SOLO SUPER ADMIN) --- */}
+          {perfil?.rol === 'Super Admin' && (
+            <>
+              {/* Pequeño separador visual para el panel de administración */}
+              <div className="my-2 border-t border-outline-variant mx-2"></div>
+              <p className="text-[10px] font-bold text-on-surface-variant/70 px-4 uppercase tracking-wider mb-1">
+                Administración
+              </p>
+              
+              <button 
+                onClick={() => setCurrentView('agregarUsuario')}
+                className={`flex items-center w-full gap-3 px-4 py-3 rounded-lg font-label-md text-sm transition-all duration-200 ${
+                  currentView === 'agregarUsuario' 
+                    ? 'bg-surface-container-low text-primary' 
+                    : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary'
+                }`}
+              >
+                <span className="material-symbols-outlined" style={currentView === 'agregarUsuario' ? { fontVariationSettings: "'FILL' 1" } : {}}>person_add</span> 
+                Agregar Usuario
+              </button>
+            </>
+          )}
+
         </nav>
       </div>
 

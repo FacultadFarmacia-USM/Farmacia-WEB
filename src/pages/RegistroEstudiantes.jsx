@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import Header from '../components/header';
 
 export default function RegistroEstudiantes() {
   const [estudiantes, setEstudiantes] = useState([]);
@@ -125,7 +126,12 @@ export default function RegistroEstudiantes() {
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return 'N/A';
     const fecha = new Date(fechaISO);
-    return fecha.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    return fecha.toLocaleDateString('es-VE', { 
+      timeZone: 'UTC', 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
   };
 
   // --- VISTA 2: PERFIL DE UN ESTUDIANTE ---
@@ -262,6 +268,10 @@ export default function RegistroEstudiantes() {
                 <p><strong className="text-on-surface">Ciudad asignada:</strong> {infoFarmatodo.ciudad}</p>
                 <p><strong className="text-on-surface">Opción 1:</strong> {sucursal1 || 'N/A'}</p>
                 <p><strong className="text-on-surface">Opción 2:</strong> {sucursal2 || 'N/A'}</p>
+                <p>
+                   <strong className="text-on-surface">Cuenta Mercantil:</strong>{' '}
+                   {infoFarmatodo.cuenta_mercantil || 'No posee / No registrada'}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-on-surface-variant/70 text-center">
@@ -296,6 +306,7 @@ export default function RegistroEstudiantes() {
             <button onClick={() => setModoEdicion(false)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors text-on-surface-variant">
               Cancelar
             </button>
+            {/* ESTA ES LA LÍNEA QUE TENÍA EL ERROR (guardarChanges -> guardarCambios) */}
             <button onClick={guardarCambios} disabled={cargando} className="flex items-center gap-2 bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-opacity-90 transition-all disabled:opacity-50">
               <span className={`material-symbols-outlined text-[18px] ${cargando ? 'animate-spin' : ''}`}>{cargando ? 'sync' : 'save'}</span>
               Guardar
@@ -306,7 +317,7 @@ export default function RegistroEstudiantes() {
     );
   }
 
-  // --- VISTA 1: DIRECTORIO DE ESTUDIANTES (CÓDIGO ORIGINAL INTACTO) ---
+  // --- VISTA 1: DIRECTORIO DE ESTUDIANTES ---
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">

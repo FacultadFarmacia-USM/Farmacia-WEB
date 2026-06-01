@@ -9,11 +9,16 @@ import FloatingAssistant from '../components/floatingassistant';
 import FormsMenu from './FormsMenu';
 import RegistroEstudiantes from './RegistroEstudiantes'; 
 import Practicas1 from './Practicas1';
+import AgregarUsuario from './AgregarUsuario';
 
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState('resumen');
 
-  // --- NUEVO ESTADO PARA LAS MÉTRICAS DE LAS TARJETAS ---
+  // --- NUEVOS ESTADOS PARA AUTENTICACIÓN Y PERFIL ---
+  const [perfil, setPerfil] = useState(null);
+  const [cargandoPerfil, setCargandoPerfil] = useState(true);
+
+  // --- ESTADO PARA LAS MÉTRICAS DE LAS TARJETAS ---
   const [metricas, setMetricas] = useState({
     total: 0,
     pasantia1: 0,
@@ -21,20 +26,39 @@ export default function Dashboard() {
     cargando: true
   });
 
-  // --- FUNCIÓN PARA CONTAR ESTUDIANTES AL CARGAR ---
   useEffect(() => {
+    // 1. FUNCIÓN PARA OBTENER EL PERFIL DEL PROFESOR DESDE SUPABASE
+    const obtenerPerfil = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('profesores')
+            .select('*')
+            .eq('id_profesor', user.id)
+            .single();
+
+          if (error) throw error;
+          setPerfil(data);
+        }
+      } catch (error) {
+        console.error("Error al cargar el perfil del docente:", error);
+      } finally {
+        setCargandoPerfil(false);
+      }
+    };
+
+    // 2. FUNCIÓN PARA CONTAR ESTUDIANTES AL CARGAR
     const obtenerMetricas = async () => {
       try {
-        // Solo traemos la columna 'etapa' de todos los estudiantes para hacer el conteo sin pesar la app
+        // Solo traemos la columna 'etapa' para no pesar la app
         const { data, error } = await supabase
           .from('estudiantes')
           .select('etapa');
 
         if (error) throw error;
 
-        // Matemáticas simples: filtramos y contamos la longitud de los arreglos
         const totalAlumnos = data.length;
-        // Asumimos que si la etapa está vacía, están en Pasantía 1 por defecto
         const enPasantia1 = data.filter(est => est.etapa === 'Pasantía 1' || !est.etapa).length;
         const enPasantia2 = data.filter(est => est.etapa === 'Pasantía 2').length;
 
@@ -51,16 +75,48 @@ export default function Dashboard() {
       }
     };
 
+    // Ejecutamos ambas funciones al mismo tiempo cuando carga el dashboard
+    obtenerPerfil();
     obtenerMetricas();
-  }, []); // Se ejecuta una sola vez al cargar el Dashboard
+  }, []); // Se ejecuta una sola vez
+
+  // --- FUNCIÓN PARA CERRAR SESIÓN ---
+  const cerrarSesion = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert("Error al cerrar sesión: " + error.message);
+    }
+    // No hace falta redirigir aquí. El main.jsx está escuchando y lo hará por ti.
+  };
+
+  // PANTALLA DE CARGA MIENTRAS SE VERIFICA QUIÉN ESTÁ LOGUEADO
+  if (cargandoPerfil) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-primary font-bold space-y-4">
+        <span className="material-symbols-outlined text-4xl animate-spin">sync</span>
+        <p>Cargando entorno de trabajo...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-on-background font-body-md antialiased flex relative medical-grid">
       
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
+      {/* Pasamos las propiedades al Sidebar por si pones ahí el botón de salir o el nombre */}
+      <Sidebar 
+        currentView={currentView} 
+        setCurrentView={setCurrentView} 
+        perfil={perfil} 
+        cerrarSesion={cerrarSesion} 
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
+        
+        {/* Pasamos las propiedades al Header por si pones ahí la foto, nombre o botón de salir */}
+        <Header 
+          perfil={perfil} 
+          cerrarSesion={cerrarSesion} 
+        />
 
         <main className="flex-1 p-6 overflow-y-auto">
           
@@ -68,7 +124,10 @@ export default function Dashboard() {
             <div className="space-y-6">
               <div>
                 <h1 className="text-3xl font-bold text-primary tracking-tight">Resumen</h1>
-                <p className="text-sm text-on-surface-variant">Panel de Administración de la Facultad de Farmacia</p>
+                <p className="text-sm text-on-surface-variant">
+                  {/* Mensaje de bienvenida personalizado */}
+                  Bienvenido(a), <span className="font-bold text-primary">{perfil?.nombre_completo || 'Docente'}</span>. Panel de Administración.
+                </p>
               </div>
 
               {/* TARJETAS DE ESTADÍSTICAS CON DATOS REALES DE SUPABASE */}
@@ -110,6 +169,7 @@ export default function Dashboard() {
           {currentView === 'formularios' && <FormsMenu />}
           {currentView === 'estudiantes' && <RegistroEstudiantes />}
           {currentView === 'practicas1' && <Practicas1 />}
+          {currentView === 'agregarUsuario' && <AgregarUsuario />}
 
         </main>
       </div>
