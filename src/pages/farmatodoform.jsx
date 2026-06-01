@@ -2,125 +2,135 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function FarmatodoForm() {
-  // 1. Un solo estado unificado con todos tus campos reales de la interfaz
   const [formData, setFormData] = useState({
-    nombres: '',
-    apellidos: '',
-    fechaNacimiento: '',
-    cedula: '',
-    rif: '',
-    correo: '',
-    telefono: '',
-    direccion: '',
-    ciudad: '',
-    estado: '', // Estado geográfico (Ej. Miranda)
-    farmatodoOpcion1: '',
-    farmatodoOpcion2: '',
-    empleadoActivo: '',
-    cuenta_mercantil: '' // CORRECCIÓN 1: Inicializar el campo en el estado
+    nombres: '', apellidos: '', fechaNacimiento: '', cedula: '', rif: '',
+    correo: '', telefono: '', direccion: '', ciudad: '', estado: '',
+    farmatodoOpcion1: '', farmatodoOpcion2: '', empleadoActivo: '',
+    cuenta_mercantil: ''
   });
 
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  // 2. Manejador de cambios en los inputs
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    // BLOQUEO EN TIEMPO REAL: Si es la cuenta mercantil, borra inmediatamente lo que no sea número
+    if (name === 'cuenta_mercantil') {
+      const soloNumeros = value.replace(/\D/g, ''); // Remueve cualquier letra o símbolo
+      setFormData({ ...formData, [name]: soloNumeros });
+      return;
+    }
+
+    setFormData({ ...formData, [name]: value });
+    setFormError(''); 
   };
 
-  // 3. Procesamiento del envío relacional a Supabase
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError('');
+    
+    // SANITIZACIÓN FINAL ANTES DE SUPABASE
+    const cleanData = {
+      ...formData,
+      nombres: formData.nombres.trim(),
+      apellidos: formData.apellidos.trim(),
+      cedula: formData.cedula.trim().toUpperCase(),
+      rif: formData.rif.trim().toUpperCase(),
+      correo: formData.correo.trim().toLowerCase(),
+      telefono: formData.telefono.trim(),
+      cuenta_mercantil: formData.cuenta_mercantil.trim()
+    };
+
+    // VALIDACIONES DE SEGURIDAD
+    const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+    const regexCedula = /^[VE]-\d{6,8}$/;
+    const regexRif = /^[VEJG]-\d{6,9}-\d{1}$/;
+    const regexTelefono = /^0(412|414|416|424|426)-?\d{7}$/;
+    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!soloLetras.test(cleanData.nombres) || !soloLetras.test(cleanData.apellidos)) {
+      return setFormError('Los nombres y apellidos solo deben contener letras.');
+    }
+    if (!regexCedula.test(cleanData.cedula)) {
+      return setFormError('La Cédula debe tener el formato V-12345678 o E-12345678.');
+    }
+    if (!regexRif.test(cleanData.rif)) {
+      return setFormError('El RIF debe tener el formato exacto V-12345678-0.');
+    }
+    if (!regexCorreo.test(cleanData.correo)) {
+      return setFormError('Ingresa una dirección de correo electrónico válida.');
+    }
+    if (!regexTelefono.test(cleanData.telefono)) {
+      return setFormError('El teléfono debe ser un celular válido (Ej. 0414-1234567).');
+    }
+    if (cleanData.cuenta_mercantil && cleanData.cuenta_mercantil.length !== 20) {
+      return setFormError('La cuenta Mercantil debe tener exactamente 20 dígitos.');
+    }
+
     setLoading(true);
 
     try {
-      // PASO 1: Insertar en la tabla 'estudiantes'
       const { data: estudianteCreado, error: errorEstudiante } = await supabase
         .from('estudiantes')
-        .insert([
-          {
-            cedula: formData.cedula,
-            rif: formData.rif,
-            nombres: formData.nombres,
-            apellidos: formData.apellidos,
-            fecha_nacimiento: formData.fechaNacimiento,
-            correo: formData.correo,
-            telefono: formData.telefono
-            // 'etapa' y 'estado' (académico) se configuran por defecto en la Base de Datos
-          }
-        ])
-        .select() 
-        .single();
+        .insert([{
+            cedula: cleanData.cedula,
+            rif: cleanData.rif,
+            nombres: cleanData.nombres,
+            apellidos: cleanData.apellidos,
+            fecha_nacimiento: cleanData.fechaNacimiento,
+            correo: cleanData.correo,
+            telefono: cleanData.telefono
+        }])
+        .select().single();
 
       if (errorEstudiante) throw errorEstudiante;
 
-      // PASO 2: Insertar en 'pasantia_farmatodo' usando 'id_estudiante'
       const { data: pasantiaCreada, error: errorPasantia } = await supabase
         .from('pasantia_farmatodo')
-        .insert([
-          {
+        .insert([{
             id_estudiante: estudianteCreado.id_estudiante,
-            ciudad: formData.ciudad,
-            cuenta_mercantil: formData.cuenta_mercantil // CORRECCIÓN 2: Enviar el dato a Supabase
-          }
-        ])
-        .select()
-        .single();
+            ciudad: cleanData.ciudad,
+            cuenta_mercantil: cleanData.cuenta_mercantil,
+            empleado_activo: cleanData.empleadoActivo
+        }])
+        .select().single();
 
       if (errorPasantia) throw errorPasantia;
 
-      // PASO 3: Insertar las sucursales en 'farmatodo_sucursales' (4FN)
       const { error: errorSucursales } = await supabase
         .from('farmatodo_sucursales')
         .insert([
-          { 
-            id_pasantia_farmatodo: pasantiaCreada.id_pasantia_farmatodo,
-            prioridad: 1, 
-            sucursal: formData.farmatodoOpcion1 
-          },
-          { 
-            id_pasantia_farmatodo: pasantiaCreada.id_pasantia_farmatodo,
-            prioridad: 2, 
-            sucursal: formData.farmatodoOpcion2 
-          }
+          { id_pasantia_farmatodo: pasantiaCreada.id_pasantia_farmatodo, prioridad: 1, sucursal: cleanData.farmatodoOpcion1 },
+          { id_pasantia_farmatodo: pasantiaCreada.id_pasantia_farmatodo, prioridad: 2, sucursal: cleanData.farmatodoOpcion2 }
         ]);
 
       if (errorSucursales) throw errorSucursales;
 
-      // ¡Éxito total!
       alert('¡Tu solicitud de pasantía ha sido registrada con éxito en el sistema!');
       
-      // Limpieza opcional del formulario
       setFormData({
         nombres: '', apellidos: '', fechaNacimiento: '', cedula: '', rif: '',
         correo: '', telefono: '', direccion: '', ciudad: '', estado: '',
         farmatodoOpcion1: '', farmatodoOpcion2: '', empleadoActivo: '',
-        cuenta_mercantil: '' // CORRECCIÓN 3: Limpiar el campo tras un envío exitoso
+        cuenta_mercantil: ''
       });
 
     } catch (error) {
       console.error('Error detallado de Supabase:', error);
-      
       if (error.code === '23505') { 
         if (error.message.includes('cedula_unica') || error.message.includes('cedula')) {
-          alert(`⚠️ Error: Ya existe una solicitud registrada con la Cédula: ${formData.cedula}.`);
-        } 
-        else if (error.message.includes('rif_unico') || error.message.includes('rif')) {
-          alert(`⚠️ Error: El RIF ${formData.rif} ya está registrado en nuestro sistema.`);
+          setFormError(`Ya existe una solicitud registrada con la Cédula: ${cleanData.cedula}.`);
+        } else if (error.message.includes('rif_unico') || error.message.includes('rif')) {
+          setFormError(`El RIF ${cleanData.rif} ya está registrado en nuestro sistema.`);
+        } else if (error.message.includes('correo_unico') || error.message.includes('correo')) {
+          setFormError(`El correo electrónico ${cleanData.correo} ya fue utilizado.`);
+        } else {
+          setFormError('Ya existe un registro con estos datos personales.');
         }
-        else if (error.message.includes('correo_unico') || error.message.includes('correo')) {
-          alert(`⚠️ Error: El correo electrónico ${formData.correo} ya fue utilizado por otro estudiante.`);
-        } 
-        else {
-          alert('⚠️ Error: Ya existe un registro con estos datos personales (Cédula, RIF o Correo).');
-        }
-        
       } else {
-        alert(`❌ Ocurrió un error de conexión al guardar los datos: ${error.message || 'Inténtalo de nuevo.'}`);
+        setFormError(`Error de conexión: ${error.message || 'Inténtalo de nuevo.'}`);
       }
-      
     } finally {
       setLoading(false);
     }
@@ -139,6 +149,13 @@ export default function FarmatodoForm() {
           <p className="text-sm text-on-surface-variant mt-1">Formulario inicial para asignación de sucursales</p>
         </div>
 
+        {formError && (
+          <div className="mb-6 p-4 bg-error-container text-on-error-container border border-error rounded-lg flex items-center gap-3">
+            <span className="material-symbols-outlined">error</span>
+            <span className="text-sm font-medium">{formError}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {/* SECCIÓN 1: DATOS PERSONALES */}
@@ -150,28 +167,28 @@ export default function FarmatodoForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Nombres</label>
-                <input type="text" name="nombres" required value={formData.nombres} onChange={handleChange}
+                <input type="text" name="nombres" required maxLength="50" value={formData.nombres} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. María Alejandra" />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Apellidos</label>
-                <input type="text" name="apellidos" required value={formData.apellidos} onChange={handleChange}
+                <input type="text" name="apellidos" required maxLength="50" value={formData.apellidos} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. González Pérez" />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Cédula de Identidad</label>
-                <input type="text" name="cedula" required value={formData.cedula} onChange={handleChange}
+                <input type="text" name="cedula" required maxLength="12" value={formData.cedula} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. V-25123456" />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">RIF</label>
-                <input type="text" name="rif" required value={formData.rif} onChange={handleChange}
+                <input type="text" name="rif" required maxLength="14" value={formData.rif} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. V-25123456-0" />
               </div>
@@ -193,35 +210,35 @@ export default function FarmatodoForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Correo Electrónico</label>
-                <input type="email" name="correo" required value={formData.correo} onChange={handleChange}
+                <input type="email" name="correo" required maxLength="100" value={formData.correo} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="correo@ejemplo.com" />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Teléfono Móvil</label>
-                <input type="tel" name="telefono" required value={formData.telefono} onChange={handleChange}
+                <input type="tel" name="telefono" required maxLength="12" value={formData.telefono} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. 0414-1234567" />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Dirección de Habitación (Detallada)</label>
-                <textarea name="direccion" rows="2" required value={formData.direccion} onChange={handleChange}
+                <textarea name="direccion" rows="2" required maxLength="300" value={formData.direccion} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Avenida, Calle, Edificio/Casa, Punto de referencia..."></textarea>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Ciudad</label>
-                <input type="text" name="ciudad" required value={formData.ciudad} onChange={handleChange}
+                <input type="text" name="ciudad" required maxLength="50" value={formData.ciudad} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. Los Teques" />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-on-surface-variant mb-1">Estado</label>
-                <input type="text" name="estado" required value={formData.estado} onChange={handleChange}
+                <input type="text" name="estado" required maxLength="50" value={formData.estado} onChange={handleChange}
                   className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                   placeholder="Ej. Miranda" />
               </div>
@@ -238,14 +255,14 @@ export default function FarmatodoForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-on-surface-variant mb-1">Opción 1 de Sucursal Farmatodo</label>
-                  <input type="text" name="farmatodoOpcion1" required value={formData.farmatodoOpcion1} onChange={handleChange}
+                  <input type="text" name="farmatodoOpcion1" required maxLength="100" value={formData.farmatodoOpcion1} onChange={handleChange}
                     className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                     placeholder="Indique la sucursal de preferencia" />
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-on-surface-variant mb-1">Opción 2 de Sucursal Farmatodo</label>
-                  <input type="text" name="farmatodoOpcion2" required value={formData.farmatodoOpcion2} onChange={handleChange}
+                  <input type="text" name="farmatodoOpcion2" required maxLength="100" value={formData.farmatodoOpcion2} onChange={handleChange}
                     className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
                     placeholder="Indique una sucursal alternativa" />
                 </div>
@@ -271,7 +288,6 @@ export default function FarmatodoForm() {
             </div>
           </div>
 
-          {/* CORRECCIÓN 4: Vinculación correcta del input con las variables formData y handleChange */}
           <div className="flex flex-col gap-1">
             <label className="block text-xs font-medium text-on-surface-variant mb-1">
               ¿Posee Cuenta Corriente Mercantil? (Opcional)
@@ -280,14 +296,13 @@ export default function FarmatodoForm() {
               type="text" 
               name="cuenta_mercantil" 
               maxLength="20" 
-              placeholder="Ingrese su número de cuenta de 20 dígitos (si posee)" 
+              placeholder="Ingrese su número de cuenta de 20 dígitos" 
               value={formData.cuenta_mercantil} 
               onChange={handleChange} 
               className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm" 
             />
           </div>
 
-          {/* Botón de Envío Dinámico */}
           <button 
             type="submit"
             disabled={loading}
@@ -296,7 +311,7 @@ export default function FarmatodoForm() {
             <span className="material-symbols-outlined text-sm">
               {loading ? 'sync' : 'send'}
             </span> 
-            {loading ? 'Enviando Solicitud...' : 'Enviar Solicitud'}
+            {loading ? 'Validando y Enviando...' : 'Enviar Solicitud'}
           </button>
 
         </form>

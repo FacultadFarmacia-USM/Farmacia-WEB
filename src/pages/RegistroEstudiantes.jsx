@@ -268,10 +268,9 @@ export default function RegistroEstudiantes() {
                 <p><strong className="text-on-surface">Ciudad asignada:</strong> {infoFarmatodo.ciudad}</p>
                 <p><strong className="text-on-surface">Opción 1:</strong> {sucursal1 || 'N/A'}</p>
                 <p><strong className="text-on-surface">Opción 2:</strong> {sucursal2 || 'N/A'}</p>
-                <p>
-                   <strong className="text-on-surface">Cuenta Mercantil:</strong>{' '}
-                   {infoFarmatodo.cuenta_mercantil || 'No posee / No registrada'}
-                </p>
+                <p><strong className="text-on-surface">Cuenta Mercantil:</strong> {infoFarmatodo.cuenta_mercantil || 'No posee / No registrada'}</p>
+                {/* LÍNEA NUEVA AGREGADA AQUÍ ABAJO */}
+                <p><strong className="text-on-surface">Trabajador Activo:</strong> {infoFarmatodo.empleado_activo || 'No especificado'}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-on-surface-variant/70 text-center">
@@ -306,7 +305,6 @@ export default function RegistroEstudiantes() {
             <button onClick={() => setModoEdicion(false)} className="px-4 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-high transition-colors text-on-surface-variant">
               Cancelar
             </button>
-            {/* ESTA ES LA LÍNEA QUE TENÍA EL ERROR (guardarChanges -> guardarCambios) */}
             <button onClick={guardarCambios} disabled={cargando} className="flex items-center gap-2 bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-opacity-90 transition-all disabled:opacity-50">
               <span className={`material-symbols-outlined text-[18px] ${cargando ? 'animate-spin' : ''}`}>{cargando ? 'sync' : 'save'}</span>
               Guardar

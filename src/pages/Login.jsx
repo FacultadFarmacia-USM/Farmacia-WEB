@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { supabase } from '../supabaseClient'; // Conectamos Supabase
+import { supabase } from '../supabaseClient';
+
+// ─── Tu app no usa React Router, todo vive en la raíz ────────────────────────
+// Desarrollo:  http://localhost:5173
+// Producción:  https://tu-dominio.com
+// Supabase redirige aquí y onAuthStateChange detecta PASSWORD_RECOVERY solo
+const RESET_REDIRECT_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:5173";
+// ─────────────────────────────────────────────────────────────────────────────
 
 const EyeIcon = ({ open }) => open ? (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -56,6 +63,11 @@ const s = {
     borderRadius:"10px", padding:"10px 14px",
     marginBottom:"18px", display:"flex", alignItems:"center", gap:"8px",
   },
+  successBox: {
+    background:"#d8ebd1", border:"1px solid #a3d29a",
+    borderRadius:"10px", padding:"12px 14px",
+    marginBottom:"18px", display:"flex", alignItems:"flex-start", gap:"8px",
+  },
   infoBox: {
     marginTop:"22px", padding:"12px 14px",
     background:"#eff4ff", borderRadius:"10px",
@@ -101,32 +113,22 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
   const [ef, setEf] = useState(false);
   const [pf, setPf] = useState(false);
 
-  // --- LÓGICA DE SUPABASE INTEGRADA AQUÍ ---
   const handleLogin = async () => {
     setError("");
-    
-    // Validación de campos vacíos
-    if (!email || !password) { 
-      setError("Por favor completa todos los campos."); 
-      return; 
+    setSuccessMsg("");
+    if (!email || !password) {
+      setError("Por favor completa todos los campos.");
+      return;
     }
-    
     setLoading(true);
-    
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
-
+      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
-      
-      // Si el login es exitoso, App.jsx detectará el cambio de sesión 
-      // automáticamente y te llevará al Dashboard sin hacer nada más.
-      
     } catch (err) {
       console.error(err);
       setError("Credenciales incorrectas. Verifica tu usuario y contraseña.");
@@ -135,11 +137,37 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setError("");
+    setSuccessMsg("");
+
+    if (!email) {
+      setError("Ingresa tu correo institucional en el campo superior para enviarte el enlace.");
+      return;
+    }
+
+    setSendingReset(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: RESET_REDIRECT_URL, // ← ruta exacta donde vive FormularioNuevaPassword
+      });
+
+      if (resetError) throw resetError;
+
+      setSuccessMsg("Enlace enviado. Revisa tu bandeja de entrada o carpeta de spam.");
+    } catch (err) {
+      console.error(err);
+      // Mostramos el mensaje real de Supabase para facilitar el diagnóstico
+      setError(`No se pudo enviar el enlace: ${err.message}`);
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   const onKeyDown = (e) => { if (e.key === "Enter") handleLogin(); };
 
   return (
     <div style={s.page}>
-      {/* grid bg */}
       <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",opacity:0.18}} xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id="g" width="24" height="24" patternUnits="userSpaceOnUse">
@@ -153,7 +181,7 @@ export default function Login() {
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"440px",margin:"0 16px"}}>
         <div style={s.card}>
 
-          {/* ── Header ── */}
+          {/* Header */}
           <div style={s.header}>
             <div style={s.headerGlow}/>
             <div style={{display:"flex",alignItems:"center",gap:"14px",marginBottom:"18px",position:"relative"}}>
@@ -189,7 +217,7 @@ export default function Login() {
             </div>
           </div>
 
-          {/* ── Body ── */}
+          {/* Body */}
           <div style={s.body}>
 
             {error && (
@@ -198,6 +226,15 @@ export default function Login() {
                   <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <span style={{fontSize:"13px",color:"#93000a",fontWeight:"500"}}>{error}</span>
+              </div>
+            )}
+
+            {successMsg && (
+              <div style={s.successBox}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#27500a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginTop:"1px",flexShrink:0}}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span style={{fontSize:"13px",color:"#27500a",fontWeight:"500"}}>{successMsg}</span>
               </div>
             )}
 
@@ -250,26 +287,34 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Forgot */}
+            {/* Forgot Password */}
             <div style={{textAlign:"right",marginBottom:"22px"}}>
-              <button type="button" style={{
-                background:"none",border:"none",cursor:"pointer",
-                fontSize:"13px",color:"#006d37",fontWeight:"500",
-                fontFamily:"Inter,sans-serif",padding:0,
-              }}>¿Olvidaste tu contraseña?</button>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={sendingReset}
+                style={{
+                  background:"none",border:"none",
+                  cursor: sendingReset ? "wait" : "pointer",
+                  fontSize:"13px",color:"#006d37",fontWeight:"500",
+                  fontFamily:"Inter,sans-serif",padding:0,
+                  opacity: sendingReset ? 0.6 : 1,
+                }}>
+                {sendingReset ? "Enviando enlace..." : "¿Olvidaste tu contraseña?"}
+              </button>
             </div>
 
             {/* Submit */}
             <button
               type="button"
               onClick={handleLogin}
-              disabled={loading}
+              disabled={loading || sendingReset}
               style={{
                 width:"100%", height:"52px",
                 background: loading ? "#4ae183" : "linear-gradient(135deg,#006d37 0%,#008a45 100%)",
                 color:"#ffffff", border:"none", borderRadius:"12px",
                 fontSize:"15px", fontWeight:"600", fontFamily:"Inter,sans-serif",
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: loading || sendingReset ? "not-allowed" : "pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:"8px",
                 transition:"all 0.2s ease",
                 boxShadow: loading ? "none" : "0 4px 14px rgba(0,109,55,0.30)",

@@ -10,6 +10,7 @@ import FormsMenu from './FormsMenu';
 import RegistroEstudiantes from './RegistroEstudiantes'; 
 import Practicas1 from './Practicas1';
 import AgregarUsuario from './AgregarUsuario';
+import AjustesCuenta from './AjustesCuenta';
 
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState('resumen');
@@ -170,6 +171,7 @@ export default function Dashboard() {
           {currentView === 'estudiantes' && <RegistroEstudiantes />}
           {currentView === 'practicas1' && <Practicas1 />}
           {currentView === 'agregarUsuario' && <AgregarUsuario />}
+          {currentView === 'configuracion' && <AjustesCuenta perfil={perfil} />}
 
         </main>
       </div>
