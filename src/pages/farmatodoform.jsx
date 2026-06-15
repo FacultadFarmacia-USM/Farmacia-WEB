@@ -1,5 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+
+// --- NUEVO COMPONENTE: Buscador de Sucursales Personalizado ---
+const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, name, onChange }) => {
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+
+  // Filtrar las opciones según lo que el usuario escriba en la lupita
+  const opcionesFiltradas = opciones.filter(op => 
+    op.nombre_sucursal.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const handleSeleccionar = (valor) => {
+    // Simulamos el evento "e" que espera tu función handleChange
+    onChange({ target: { name, value: valor } });
+    setAbierto(false);
+    setBusqueda('');
+  };
+
+  return (
+    <div className="relative w-full">
+      <label className="block text-xs font-medium text-on-surface-variant mb-1">{label}</label>
+      
+      {/* Botón que despliega el menú */}
+      <div 
+        onClick={() => setAbierto(!abierto)}
+        className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-all text-sm flex justify-between items-center cursor-pointer"
+      >
+        <span className={valorSeleccionado ? "text-on-surface" : "text-on-surface-variant"}>
+          {valorSeleccionado || placeholder}
+        </span>
+        <span className="material-symbols-outlined text-on-surface-variant text-lg">
+          {abierto ? 'expand_less' : 'expand_more'}
+        </span>
+      </div>
+
+      {/* Input oculto para mantener la validación "required" nativa del formulario */}
+      <input 
+        type="text" 
+        required 
+        value={valorSeleccionado} 
+        onChange={() => {}} 
+        className="absolute bottom-0 left-1/2 opacity-0 pointer-events-none w-0 h-0" 
+        tabIndex={-1}
+      />
+
+      {/* Menú Desplegable */}
+      {abierto && (
+        <>
+          {/* Fondo invisible para cerrar al hacer clic afuera */}
+          <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)}></div>
+          
+          <div className="absolute z-50 w-full mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-xl overflow-hidden">
+            {/* Buscador con Lupita */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-outline-variant bg-surface-container-low">
+              <span className="material-symbols-outlined text-on-surface-variant text-sm">search</span>
+              <input 
+                type="text" 
+                autoFocus
+                placeholder="Buscar sucursal..." 
+                value={busqueda} 
+                onChange={(e) => setBusqueda(e.target.value)} 
+                className="w-full bg-transparent text-sm outline-none text-on-surface placeholder:text-on-surface-variant/70"
+              />
+            </div>
+            
+            {/* Lista de Resultados */}
+            <ul className="max-h-48 overflow-y-auto">
+              {opcionesFiltradas.length > 0 ? (
+                opcionesFiltradas.map((sucursal) => (
+                  <li 
+                    key={sucursal.id} 
+                    onClick={() => handleSeleccionar(sucursal.nombre_sucursal)}
+                    className="px-4 py-2 text-sm hover:bg-secondary/10 cursor-pointer transition-colors text-on-surface"
+                  >
+                    {sucursal.nombre_sucursal}
+                  </li>
+                ))
+              ) : (
+                <li className="px-4 py-3 text-sm text-center text-on-surface-variant">
+                  No se encontró ninguna sucursal.
+                </li>
+              )}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+// ---------------------------------------------------------------
+
 
 export default function FarmatodoForm() {
   const [formData, setFormData] = useState({
@@ -11,13 +102,29 @@ export default function FarmatodoForm() {
 
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
+  const [listaSucursales, setListaSucursales] = useState([]);
+
+  useEffect(() => {
+    const cargarCatálogo = async () => {
+      const { data, error } = await supabase
+        .from('catalogo_sucursales')
+        .select('id, nombre_sucursal')
+        .order('nombre_sucursal', { ascending: true });
+
+      if (!error && data) {
+        setListaSucursales(data);
+      } else {
+        console.error("Error al cargar el catálogo de sucursales:", error);
+      }
+    };
+    cargarCatálogo();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // BLOQUEO EN TIEMPO REAL: Si es la cuenta mercantil, borra inmediatamente lo que no sea número
     if (name === 'cuenta_mercantil') {
-      const soloNumeros = value.replace(/\D/g, ''); // Remueve cualquier letra o símbolo
+      const soloNumeros = value.replace(/\D/g, ''); 
       setFormData({ ...formData, [name]: soloNumeros });
       return;
     }
@@ -30,7 +137,6 @@ export default function FarmatodoForm() {
     e.preventDefault();
     setFormError('');
     
-    // SANITIZACIÓN FINAL ANTES DE SUPABASE
     const cleanData = {
       ...formData,
       nombres: formData.nombres.trim(),
@@ -42,7 +148,6 @@ export default function FarmatodoForm() {
       cuenta_mercantil: formData.cuenta_mercantil.trim()
     };
 
-    // VALIDACIONES DE SEGURIDAD
     const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
     const regexCedula = /^[VE]-\d{6,8}$/;
     const regexRif = /^[VEJG]-\d{6,9}-\d{1}$/;
@@ -140,7 +245,6 @@ export default function FarmatodoForm() {
     <div className="min-h-screen bg-background text-on-background font-body-md antialiased flex items-center justify-center p-4 md:p-8 relative medical-grid">
       <div className="max-w-3xl w-full bg-surface-container-lowest rounded-xl border border-outline-variant p-6 md:p-8 shadow-lg relative z-10 my-8">
         
-        {/* Encabezado */}
         <div className="text-center mb-8 border-b border-outline-variant pb-6">
           <div className="w-16 h-16 rounded-full bg-surface-container-low text-secondary flex items-center justify-center mx-auto mb-3">
             <span className="material-symbols-outlined text-3xl">storefront</span>
@@ -252,23 +356,31 @@ export default function FarmatodoForm() {
             </h3>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Opción 1 de Sucursal Farmatodo</label>
-                  <input type="text" name="farmatodoOpcion1" required maxLength="100" value={formData.farmatodoOpcion1} onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
-                    placeholder="Indique la sucursal de preferencia" />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-20">
+                
+                {/* --- APLICAMOS EL NUEVO COMPONENTE --- */}
+                <BuscadorSucursal 
+                  label="Opción 1 de Sucursal Farmatodo"
+                  placeholder="Seleccione una sucursal..."
+                  name="farmatodoOpcion1"
+                  opciones={listaSucursales}
+                  valorSeleccionado={formData.farmatodoOpcion1}
+                  onChange={handleChange}
+                />
 
-                <div>
-                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Opción 2 de Sucursal Farmatodo</label>
-                  <input type="text" name="farmatodoOpcion2" required maxLength="100" value={formData.farmatodoOpcion2} onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all text-sm"
-                    placeholder="Indique una sucursal alternativa" />
-                </div>
+                <BuscadorSucursal 
+                  label="Opción 2 de Sucursal Farmatodo"
+                  placeholder="Seleccione una alternativa..."
+                  name="farmatodoOpcion2"
+                  // El filtro automático para no repetir opciones sigue intacto
+                  opciones={listaSucursales.filter(s => s.nombre_sucursal !== formData.farmatodoOpcion1)}
+                  valorSeleccionado={formData.farmatodoOpcion2}
+                  onChange={handleChange}
+                />
+
               </div>
 
-              <div>
+              <div className="mt-4">
                 <label className="block text-xs font-medium text-on-surface-variant mb-2">¿Es usted empleado activo de Farmatodo actualmente?</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
