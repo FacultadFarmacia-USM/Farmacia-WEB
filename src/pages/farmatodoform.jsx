@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-// --- NUEVO COMPONENTE: Buscador de Sucursales Personalizado ---
+// --- COMPONENTE: Buscador de Sucursales Personalizado ---
 const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, name, onChange }) => {
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
 
-  // Filtrar las opciones según lo que el usuario escriba en la lupita
   const opcionesFiltradas = opciones.filter(op => 
     op.nombre_sucursal.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   const handleSeleccionar = (valor) => {
-    // Simulamos el evento "e" que espera tu función handleChange
     onChange({ target: { name, value: valor } });
     setAbierto(false);
     setBusqueda('');
@@ -22,7 +20,6 @@ const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, nam
     <div className="relative w-full">
       <label className="block text-xs font-medium text-on-surface-variant mb-1">{label}</label>
       
-      {/* Botón que despliega el menú */}
       <div 
         onClick={() => setAbierto(!abierto)}
         className="w-full px-4 py-2 rounded-lg border border-outline-variant bg-surface focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-all text-sm flex justify-between items-center cursor-pointer"
@@ -35,7 +32,6 @@ const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, nam
         </span>
       </div>
 
-      {/* Input oculto para mantener la validación "required" nativa del formulario */}
       <input 
         type="text" 
         required 
@@ -45,14 +41,11 @@ const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, nam
         tabIndex={-1}
       />
 
-      {/* Menú Desplegable */}
       {abierto && (
         <>
-          {/* Fondo invisible para cerrar al hacer clic afuera */}
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)}></div>
           
           <div className="absolute z-50 w-full mt-1 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-xl overflow-hidden">
-            {/* Buscador con Lupita */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-outline-variant bg-surface-container-low">
               <span className="material-symbols-outlined text-on-surface-variant text-sm">search</span>
               <input 
@@ -65,7 +58,6 @@ const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, nam
               />
             </div>
             
-            {/* Lista de Resultados */}
             <ul className="max-h-48 overflow-y-auto">
               {opcionesFiltradas.length > 0 ? (
                 opcionesFiltradas.map((sucursal) => (
@@ -89,7 +81,6 @@ const BuscadorSucursal = ({ label, placeholder, opciones, valorSeleccionado, nam
     </div>
   );
 };
-// ---------------------------------------------------------------
 
 
 export default function FarmatodoForm() {
@@ -103,21 +94,33 @@ export default function FarmatodoForm() {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [listaSucursales, setListaSucursales] = useState([]);
+  
+  // 🔥 NUEVO: Estado para capturar el período activo del sistema
+  const [periodoActivoId, setPeriodoActivoId] = useState(null);
 
   useEffect(() => {
-    const cargarCatálogo = async () => {
-      const { data, error } = await supabase
+    const cargarCatálogoYPeriodo = async () => {
+      // 1. Cargar sucursales
+      const { data: sucursales, error: errSuc } = await supabase
         .from('catalogo_sucursales')
         .select('id, nombre_sucursal')
         .order('nombre_sucursal', { ascending: true });
 
-      if (!error && data) {
-        setListaSucursales(data);
-      } else {
-        console.error("Error al cargar el catálogo de sucursales:", error);
+      if (!errSuc && sucursales) setListaSucursales(sucursales);
+
+      // 2. 🔥 NUEVO: Detectar cuál es el periodo académico activo en tiempo real
+      const { data: periodo, error: errPer } = await supabase
+        .from('periodos_academicos')
+        .select('id')
+        .eq('activo', true)
+        .maybeSingle();
+
+      if (!errPer && periodo) {
+        setPeriodoActivoId(periodo.id);
       }
     };
-    cargarCatálogo();
+    
+    cargarCatálogoYPeriodo();
   }, []);
 
   const handleChange = (e) => {
@@ -136,6 +139,11 @@ export default function FarmatodoForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    // Validación preventiva de cohortes
+    if (!periodoActivoId) {
+      return setFormError('Lo sentimos, no hay ningún período académico activo en este momento. Notifique al administrador.');
+    }
     
     const cleanData = {
       ...formData,
@@ -145,6 +153,9 @@ export default function FarmatodoForm() {
       rif: formData.rif.trim().toUpperCase(),
       correo: formData.correo.trim().toLowerCase(),
       telefono: formData.telefono.trim(),
+      direccion: formData.direccion.trim(),
+      ciudad: formData.ciudad.trim(),
+      estado: formData.estado.trim(),
       cuenta_mercantil: formData.cuenta_mercantil.trim()
     };
 
@@ -176,6 +187,7 @@ export default function FarmatodoForm() {
     setLoading(true);
 
     try {
+      // 1. Insertar Datos Personales del Alumno (Añadimos dirección y estado que faltaban)
       const { data: estudianteCreado, error: errorEstudiante } = await supabase
         .from('estudiantes')
         .insert([{
@@ -185,24 +197,30 @@ export default function FarmatodoForm() {
             apellidos: cleanData.apellidos,
             fecha_nacimiento: cleanData.fechaNacimiento,
             correo: cleanData.correo,
-            telefono: cleanData.telefono
+            telefono: cleanData.telefono,
+            direccion: cleanData.direccion, 
+            estado_ubicacion: cleanData.estado,
+            estado: 'Activo'    
         }])
         .select().single();
 
       if (errorEstudiante) throw errorEstudiante;
 
+      // 2. Insertar relación de Pasantía ligándola al periodo activo
       const { data: pasantiaCreada, error: errorPasantia } = await supabase
         .from('pasantia_farmatodo')
         .insert([{
             id_estudiante: estudianteCreado.id_estudiante,
             ciudad: cleanData.ciudad,
             cuenta_mercantil: cleanData.cuenta_mercantil,
-            empleado_activo: cleanData.empleadoActivo
+            empleado_activo: cleanData.empleadoActivo,
+            periodo_id: periodoActivoId // 🔥 ¡AQUÍ ESTÁ LA MAGIA!
         }])
         .select().single();
 
       if (errorPasantia) throw errorPasantia;
 
+      // 3. Registrar Sucursales de preferencia
       const { error: errorSucursales } = await supabase
         .from('farmatodo_sucursales')
         .insert([
@@ -357,8 +375,6 @@ export default function FarmatodoForm() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-20">
-                
-                {/* --- APLICAMOS EL NUEVO COMPONENTE --- */}
                 <BuscadorSucursal 
                   label="Opción 1 de Sucursal Farmatodo"
                   placeholder="Seleccione una sucursal..."
@@ -372,12 +388,10 @@ export default function FarmatodoForm() {
                   label="Opción 2 de Sucursal Farmatodo"
                   placeholder="Seleccione una alternativa..."
                   name="farmatodoOpcion2"
-                  // El filtro automático para no repetir opciones sigue intacto
                   opciones={listaSucursales.filter(s => s.nombre_sucursal !== formData.farmatodoOpcion1)}
                   valorSeleccionado={formData.farmatodoOpcion2}
                   onChange={handleChange}
                 />
-
               </div>
 
               <div className="mt-4">
