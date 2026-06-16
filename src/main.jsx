@@ -6,6 +6,7 @@ import Login from './pages/Login.jsx';
 import FormularioNuevaPassword from './pages/FormularioNuevaPassword.jsx'; // <-- 1. IMPORTA TU NUEVO COMPONENTE DE CLAVE
 import { supabase } from './supabaseClient';
 import './index.css';
+import FarmaGuiaChat from './components/FarmaGuiaChat'; // nuevo (Chatbot)
 
 const App = () => {
   const [sesion, setSesion] = useState(null);
@@ -53,13 +54,23 @@ const App = () => {
     return <FormularioNuevaPassword alTerminar={() => setModoRecuperacion(false)} />;
   }
 
-  // REGLA 2: Si es el administrador pero NO ha iniciado sesión, le mostramos el Login
+  // REGLA 2: Si es el administrador pero NO ha iniciado sesión, le mostramos el Login + chatbot
   if (!sesion) {
-    return <Login />;
+    return (
+      <>
+        <Login />
+        <FarmaGuiaChat /> 
+      </>
+    );
   }
 
-  // REGLA 3: Si es el administrador y SÍ tiene sesión activa, lo dejamos pasar al Dashboard
-  return <Dashboard />;
+  // REGLA 3: Si es el administrador y SÍ tiene sesión activa, lo dejamos pasar al Dashboard + chatbot
+  return (
+    <>
+      <Dashboard />
+      <FarmaGuiaChat />
+    </>
+  );
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(
