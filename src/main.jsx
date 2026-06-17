@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import Dashboard from './pages/dashboard.jsx'; 
 import FarmatodoForm from './pages/farmatodoform.jsx'; 
+import Practicas2Form from './pages/Practicas2Form.jsx'; // <-- 1. IMPORTAMOS EL NUEVO FORMULARIO
 import Login from './pages/Login.jsx'; 
-import FormularioNuevaPassword from './pages/FormularioNuevaPassword.jsx'; // <-- 1. IMPORTA TU NUEVO COMPONENTE DE CLAVE
+import FormularioNuevaPassword from './pages/FormularioNuevaPassword.jsx'; 
 import { supabase } from './supabaseClient';
 import './index.css';
 
 const App = () => {
   const [sesion, setSesion] = useState(null);
   const [cargandoSesion, setCargandoSesion] = useState(true);
-  const [modoRecuperacion, setModoRecuperacion] = useState(false); // <-- 2. NUEVO ESTADO
+  const [modoRecuperacion, setModoRecuperacion] = useState(false); 
 
   // Validamos si la URL contiene el parámetro para el alumno
   const parametrosURL = new URLSearchParams(window.location.search);
@@ -23,11 +24,11 @@ const App = () => {
       setCargandoSesion(false);
     });
 
-    // 2. Quedarse "escuchando" cambios. Cambiamos "_event" por "event" para poder leerlo.
+    // 2. Quedarse "escuchando" cambios. 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSesion(session);
 
-      // <-- 3. CAPTURAMOS EL EVENTO DE RECUPERACIÓN AQUÍ
+      // 3. CAPTURAMOS EL EVENTO DE RECUPERACIÓN AQUÍ
       if (event === 'PASSWORD_RECOVERY') {
         setModoRecuperacion(true);
       }
@@ -38,9 +39,14 @@ const App = () => {
 
   // --- REGLAS DE NAVEGACIÓN ---
 
-  // REGLA 1: Si es el link público del alumno, entra directo al formulario (Sin pedir clave)
+  // REGLA 1: Si es el link público del alumno, entra directo a Prácticas 1
   if (vistaActual === 'alumno-farmatodo') {
     return <FarmatodoForm />;
+  }
+
+  // 🔥 NUEVA REGLA 2: Si es el link público del alumno para la Industria (Prácticas 2)
+  if (vistaActual === 'alumno-industria') {
+    return <Practicas2Form />;
   }
 
   // Mientras revisa si hay sesión en Supabase, mostramos pantalla blanca o un loader
@@ -48,17 +54,17 @@ const App = () => {
     return <div className="h-screen bg-surface flex items-center justify-center text-primary">Cargando...</div>;
   }
 
-  // 🔥 NUEVA REGLA: Si hizo clic en el correo de recuperación, lo interceptamos antes que al Login
+  // Si hizo clic en el correo de recuperación, lo interceptamos antes que al Login
   if (modoRecuperacion) {
     return <FormularioNuevaPassword alTerminar={() => setModoRecuperacion(false)} />;
   }
 
-  // REGLA 2: Si es el administrador pero NO ha iniciado sesión, le mostramos el Login
+  // REGLA 3: Si es el administrador pero NO ha iniciado sesión, le mostramos el Login
   if (!sesion) {
     return <Login />;
   }
 
-  // REGLA 3: Si es el administrador y SÍ tiene sesión activa, lo dejamos pasar al Dashboard
+  // REGLA 4: Si es el administrador y SÍ tiene sesión activa, lo dejamos pasar al Dashboard
   return <Dashboard />;
 };
 

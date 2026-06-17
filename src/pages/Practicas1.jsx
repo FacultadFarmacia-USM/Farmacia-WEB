@@ -100,33 +100,51 @@ export default function Practicas1() {
     try {
       setCargando(true);
       
-      const datosAEnviar = { ...datosEdicion };
+      // 1. Aislamos solo los datos que realmente vamos a modificar (Evita errores silenciosos de BD)
+      const estatusSeleccionado = datosEdicion.estatus_pasantia1;
+      const nuevaEtapa = estatusSeleccionado === 'Aprobado' ? 'En espera' : datosEdicion.etapa;
 
-      // LÓGICA AUTOMÁTICA SIMPLIFICADA: Al aprobar, pasa a "En espera"
-      if (datosAEnviar.estatus_pasantia1 === 'Aprobado') {
-        datosAEnviar.etapa = 'En espera'; 
-      }
+      const paqueteDeActualizacion = {
+        estado: datosEdicion.estado,
+        etapa: nuevaEtapa,
+        estatus_pasantia1: estatusSeleccionado,
+        nombres: datosEdicion.nombres, // Solo si también quieres que se edite el nombre
+        apellidos: datosEdicion.apellidos
+      };
 
-      const { error } = await supabase
+      // 2. Ejecutamos la actualización y le agregamos .select() para forzar respuesta
+      const { data, error } = await supabase
         .from('estudiantes')
-        .update(datosAEnviar)
-        .eq('id_estudiante', estudianteSeleccionado.id_estudiante);
+        .update(paqueteDeActualizacion)
+        .eq('id_estudiante', estudianteSeleccionado.id_estudiante)
+        .select(); 
 
       if (error) throw error;
 
-      if (datosAEnviar.estatus_pasantia1 === 'Aprobado') {
+      // 3. Validación de seguridad: Si data viene vacío, la BD bloqueó la acción
+      if (!data || data.length === 0) {
+        throw new Error("No se pudo actualizar. Posible bloqueo de permisos (RLS) en Supabase.");
+      }
+
+      // 4. Procesamos el éxito
+      if (estatusSeleccionado === 'Aprobado') {
         alert(`✅ Estudiante evaluado como APROBADO.\nSu etapa actual ahora es: "En espera"`);
+        
+        // Lo sacamos visualmente al instante para una experiencia super rápida
+        setEstudiantes((prev) => prev.filter(est => est.id_estudiante !== estudianteSeleccionado.id_estudiante));
         setEstudianteSeleccionado(null); 
       } else {
         alert('✅ Datos actualizados correctamente.');
-        setEstudianteSeleccionado({ ...estudianteSeleccionado, ...datosAEnviar });
+        setEstudianteSeleccionado({ ...estudianteSeleccionado, ...paqueteDeActualizacion });
       }
       
       setModoEdicion(false);
-      cargarDatosPracticas(); 
+      
+      // 5. Refrescamos la tabla desde la BD con await
+      await cargarDatosPracticas(); 
 
     } catch (error) {
-      console.error('Error al actualizar:', error);
+      console.error('Error detallado al actualizar:', error);
       alert(`❌ Error al actualizar: ${error.message}`);
     } finally {
       setCargando(false);
@@ -158,9 +176,15 @@ export default function Practicas1() {
     }
   };
 
+  // FUNCIÓN CORREGIDA PARA PREVENIR EL DESFASE HORARIO 🛠️
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return 'N/A';
-    const fecha = new Date(fechaISO);
+    
+    // Si la cadena mide 10 caracteres (YYYY-MM-DD), forzamos mediodía en la conversión
+    // para evitar que los husos horarios negativos de Latam resten un día completo.
+    const esFechaPura = fechaISO.length === 10 && fechaISO.includes('-');
+    const fecha = esFechaPura ? new Date(fechaISO + 'T12:00:00') : new Date(fechaISO);
+    
     return fecha.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
@@ -269,17 +293,17 @@ export default function Practicas1() {
                   {estudianteSeleccionado.estado || 'Activo'}
                 </span>
                 <p className="text-xs text-on-surface-variant mt-2 font-medium">Etapa: {estudianteSeleccionado.etapa || 'Pasantía 1'}</p>
-    <div className="mt-4 p-3 bg-surface-container-lowest rounded-xl border border-outline-variant inline-block text-left md:text-right w-full md:w-auto">
-    <p className="text-xs text-on-surface-variant font-bold mb-1">Resultado Práctica 1:</p>
-    <span className={`inline-block px-3 py-1 rounded-md text-xs font-bold tracking-wide border
-    ${estudianteSeleccionado.estatus_pasantia1 === 'Aprobado' ? 'bg-success/10 text-success border-success/30' : 
-      estudianteSeleccionado.estatus_pasantia1 === 'Reprobado' ? 'bg-error/10 text-error border-error/30' : 
-      'bg-surface-container-high text-on-surface-variant border-outline-variant'}`}>
-    {estudianteSeleccionado.estatus_pasantia1 === 'Aprobado' ? '✅ APROBADO' : 
-     estudianteSeleccionado.estatus_pasantia1 === 'Reprobado' ? '❌ REPROBADO' : 
-     '⏳ PENDIENTE'}
-  </span>
-</div>
+                <div className="mt-4 p-3 bg-surface-container-lowest rounded-xl border border-outline-variant inline-block text-left md:text-right w-full md:w-auto">
+                  <p className="text-xs text-on-surface-variant font-bold mb-1">Resultado Práctica 1:</p>
+                  <span className={`inline-block px-3 py-1 rounded-md text-xs font-bold tracking-wide border
+                    ${estudianteSeleccionado.estatus_pasantia1 === 'Aprobado' ? 'bg-success/10 text-success border-success/30' : 
+                      estudianteSeleccionado.estatus_pasantia1 === 'Reprobado' ? 'bg-error/10 text-error border-error/30' : 
+                      'bg-surface-container-high text-on-surface-variant border-outline-variant'}`}>
+                    {estudianteSeleccionado.estatus_pasantia1 === 'Aprobado' ? '✅ APROBADO' : 
+                     estudianteSeleccionado.estatus_pasantia1 === 'Reprobado' ? '❌ REPROBADO' : 
+                     '⏳ PENDIENTE'}
+                  </span>
+                </div>
               </>
             )}
           </div>
@@ -440,8 +464,6 @@ export default function Practicas1() {
                         <td className="p-4"><p className="font-bold text-primary">{estudiante.nombres} {estudiante.apellidos}</p><p className="text-xs text-on-surface-variant">{estudiante.correo}</p></td>
                         <td className="p-4 text-sm font-medium text-on-surface-variant"><span className="material-symbols-outlined text-[16px] align-middle mr-1">location_on</span>{info ? info.ciudad : 'Sin asignar'}</td>
                         <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${estudiante.estado === 'Activo' || !estudiante.estado ? 'bg-success-container text-on-success-container' : 'bg-error-container text-on-error-container'}`}>{estudiante.estado || 'Activo'}</span></td>
-                        
-                        {/* AQUÍ ESTÁ EL BOTÓN CONECTADO AL PERFIL CLONADO */}
                         <td className="p-4 text-center">
                           <button onClick={() => setEstudianteSeleccionado(estudiante)} className="text-sm bg-surface-container-high text-primary px-4 py-2 rounded-lg font-bold hover:bg-primary hover:text-white transition-colors border border-outline-variant/30">
                             Ver Perfil

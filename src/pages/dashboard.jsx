@@ -3,12 +3,13 @@ import { supabase } from '../supabaseClient';
 import Sidebar from '../components/sidebar';
 import Header from '../components/header';
 import ActivityTable from '../components/activitytable';
-import QuickForms from '../components/quickforms';
+// import QuickForms from '../components/quickforms'; <-- Ya no lo necesitamos aquí
 import StatCard from '../components/statcard';
 import FloatingAssistant from '../components/floatingassistant';
 import FormsMenu from './FormsMenu';
 import RegistroEstudiantes from './RegistroEstudiantes'; 
 import Practicas1 from './Practicas1';
+import Practicas2 from './Practicas2'; 
 import AgregarUsuario from './AgregarUsuario';
 import AjustesCuenta from './AjustesCuenta';
 
@@ -18,6 +19,9 @@ export default function Dashboard() {
   // --- NUEVOS ESTADOS PARA AUTENTICACIÓN Y PERFIL ---
   const [perfil, setPerfil] = useState(null);
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
+
+  // --- ESTADO PARA ESTUDIANTES CULMINADOS ---
+  const [estudiantesCulminados, setEstudiantesCulminados] = useState([]);
 
   // --- ESTADO PARA LAS MÉTRICAS DE LAS TARJETAS ---
   const [metricas, setMetricas] = useState({
@@ -52,16 +56,20 @@ export default function Dashboard() {
     // 2. FUNCIÓN PARA CONTAR ESTUDIANTES AL CARGAR
     const obtenerMetricas = async () => {
       try {
-        // Solo traemos la columna 'etapa' para no pesar la app
+        // Seleccionamos también id, nombres y cédula para armar la lista de culminados
         const { data, error } = await supabase
           .from('estudiantes')
-          .select('etapa');
+          .select('id_estudiante, nombres, apellidos, cedula, etapa');
 
         if (error) throw error;
 
         const totalAlumnos = data.length;
         const enPasantia1 = data.filter(est => est.etapa === 'Pasantía 1' || !est.etapa).length;
         const enPasantia2 = data.filter(est => est.etapa === 'Pasantía 2').length;
+        
+        // Filtramos los culminados y los guardamos en su estado
+        const culminados = data.filter(est => est.etapa === 'Culminado');
+        setEstudiantesCulminados(culminados);
 
         setMetricas({
           total: totalAlumnos,
@@ -76,21 +84,17 @@ export default function Dashboard() {
       }
     };
 
-    // Ejecutamos ambas funciones al mismo tiempo cuando carga el dashboard
     obtenerPerfil();
     obtenerMetricas();
-  }, []); // Se ejecuta una sola vez
+  }, []);
 
-  // --- FUNCIÓN PARA CERRAR SESIÓN ---
   const cerrarSesion = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       alert("Error al cerrar sesión: " + error.message);
     }
-    // No hace falta redirigir aquí. El main.jsx está escuchando y lo hará por ti.
   };
 
-  // PANTALLA DE CARGA MIENTRAS SE VERIFICA QUIÉN ESTÁ LOGUEADO
   if (cargandoPerfil) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-primary font-bold space-y-4">
@@ -101,9 +105,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-on-background font-body-md antialiased flex relative medical-grid">
+    <div className="h-screen overflow-hidden bg-background text-on-background font-body-md antialiased flex relative medical-grid">
       
-      {/* Pasamos las propiedades al Sidebar por si pones ahí el botón de salir o el nombre */}
       <Sidebar 
         currentView={currentView} 
         setCurrentView={setCurrentView} 
@@ -113,7 +116,6 @@ export default function Dashboard() {
 
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Pasamos las propiedades al Header por si pones ahí la foto, nombre o botón de salir */}
         <Header 
           perfil={perfil} 
           cerrarSesion={cerrarSesion} 
@@ -126,12 +128,10 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-3xl font-bold text-primary tracking-tight">Resumen</h1>
                 <p className="text-sm text-on-surface-variant">
-                  {/* Mensaje de bienvenida personalizado */}
                   Bienvenido(a), <span className="font-bold text-primary">{perfil?.nombre_completo || 'Docente'}</span>. Panel de Administración.
                 </p>
               </div>
 
-              {/* TARJETAS DE ESTADÍSTICAS CON DATOS REALES DE SUPABASE */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard 
                   title="ESTUDIANTES REGISTRADOS" 
@@ -161,7 +161,49 @@ export default function Dashboard() {
                   <ActivityTable />
                 </div>
                 <div className="lg:col-span-1">
-                  <QuickForms />
+                  
+                  {/* --- NUEVA SECCIÓN: ESTUDIANTES CULMINADOS --- */}
+                  <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-sm flex flex-col h-full min-h-[350px]">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-secondary">Estudiantes Culminados</h3>
+                      <span className="bg-success/20 text-success px-3 py-1 rounded-full text-xs font-black">
+                        Total: {estudiantesCulminados.length}
+                      </span>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3 max-h-[300px]">
+                      {estudiantesCulminados.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-on-surface-variant text-center">
+                          <span className="material-symbols-outlined text-4xl mb-2 opacity-50">school</span>
+                          <p className="text-sm font-medium">Aún no hay estudiantes culminados.</p>
+                        </div>
+                      ) : (
+                        estudiantesCulminados.map((est) => (
+                          <div key={est.id_estudiante} className="flex items-center gap-3 p-3 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-success/10 hover:border-success/30 transition-colors">
+                            <div className="w-10 h-10 bg-success/20 text-success rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                              {(est.nombres || 'E').charAt(0)}{(est.apellidos || 'S').charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-on-surface truncate">{est.nombres} {est.apellidos}</p>
+                              <p className="text-xs text-on-surface-variant truncate">Cédula: {est.cedula}</p>
+                            </div>
+                            <div className="text-success shrink-0">
+                              <span className="material-symbols-outlined text-xl">workspace_premium</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-outline-variant">
+                      <button onClick={() => setCurrentView('estudiantes')} className="w-full text-sm font-bold text-secondary hover:text-primary flex items-center justify-center gap-1 transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">verified</span>
+                        Ver registro completo
+                      </button>
+                    </div>
+                  </div>
+                  {/* --- FIN NUEVA SECCIÓN --- */}
+
                 </div>
               </div>
             </div>
@@ -170,6 +212,7 @@ export default function Dashboard() {
           {currentView === 'formularios' && <FormsMenu />}
           {currentView === 'estudiantes' && <RegistroEstudiantes />}
           {currentView === 'practicas1' && <Practicas1 />}
+          {currentView === 'practicas2' && <Practicas2 />} 
           {currentView === 'agregarUsuario' && <AgregarUsuario />}
           {currentView === 'configuracion' && <AjustesCuenta perfil={perfil} />}
 
