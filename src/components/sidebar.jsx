@@ -91,7 +91,7 @@ export default function Sidebar({ currentView, setCurrentView, perfil }) {
                 }`}
               >
                 <span className="material-symbols-outlined" style={currentView === 'agregarUsuario' ? { fontVariationSettings: "'FILL' 1" } : {}}>person_add</span> 
-                Agregar Usuario
+                Usuarios
               </button>
             </>
           )}

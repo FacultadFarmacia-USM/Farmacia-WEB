@@ -216,9 +216,11 @@ export default function RegistroEstudiantes() {
                 </select>
                 <label className="block text-xs font-bold text-on-surface-variant text-left md:text-right mt-2">Etapa</label>
                 <select name="etapa" value={datosEdicion.etapa} onChange={manejarCambioEdicion} className="px-3 py-2 text-sm border border-outline-variant rounded-lg">
+                  <option value="En espera">En espera</option>
                   <option value="Pasantía 1">Pasantía 1</option>
                   <option value="Pasantía 2">Pasantía 2</option>
-                  <option value="En espera">En espera</option>
+                  {/* NUEVA OPCIÓN AGREGADA */}
+                  <option value="Culminado">Culminado</option> 
                 </select>
               </div>
             ) : (
@@ -269,7 +271,6 @@ export default function RegistroEstudiantes() {
                 <p><strong className="text-on-surface">Opción 1:</strong> {sucursal1 || 'N/A'}</p>
                 <p><strong className="text-on-surface">Opción 2:</strong> {sucursal2 || 'N/A'}</p>
                 <p><strong className="text-on-surface">Cuenta Mercantil:</strong> {infoFarmatodo.cuenta_mercantil || 'No posee / No registrada'}</p>
-                {/* LÍNEA NUEVA AGREGADA AQUÍ ABAJO */}
                 <p><strong className="text-on-surface">Trabajador Activo:</strong> {infoFarmatodo.empleado_activo || 'No especificado'}</p>
               </div>
             ) : (
@@ -340,6 +341,8 @@ export default function RegistroEstudiantes() {
             <option value="En espera">En espera</option>
             <option value="Pasantía 1">Pasantía 1</option>
             <option value="Pasantía 2">Pasantía 2</option>
+            {/* NUEVA OPCIÓN AGREGADA AL FILTRO */}
+            <option value="Culminado">Culminado</option>
           </select>
         </div>
       </div>
@@ -360,7 +363,7 @@ export default function RegistroEstudiantes() {
               {cargando ? (
                 <tr><td colSpan="5" className="p-12 text-center text-on-surface-variant"><span className="material-symbols-outlined text-3xl animate-spin">sync</span></td></tr>
               ) : estudiantesFiltrados.length === 0 ? (
-                <tr><td colSpan="5" className="p-12 text-center text-on-surface-variant">No se encontraron estudiantes registrados.</td></tr>
+                <tr><td colSpan="5" className="p-12 text-center text-on-surface-variant">No se encontraron estudiantes con esos criterios.</td></tr>
               ) : (
                 estudiantesFiltrados.map((estudiante) => (
                   <tr key={estudiante.id_estudiante} className="hover:bg-surface-container-low/50 transition-colors">

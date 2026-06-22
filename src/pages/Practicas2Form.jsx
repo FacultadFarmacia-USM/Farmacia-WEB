@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import logoUniversidad from '../assets/logo-universidad.png';
 
 export default function Practicas2Form() {
   const [paso, setPaso] = useState(1);
@@ -154,11 +155,11 @@ export default function Practicas2Form() {
         <div className="bg-white p-8 text-center border-t-8 border-[#FE5701] border-b border-slate-100 relative">
           
           <div className="flex justify-center mb-4">
-            {/* RUTA DE IMAGEN ACTUALIZADA */}
+            {/* 👇 2. REEMPLAZA EL SRC AQUÍ */}
             <img 
-              src="/assets/logo-universidad.jpeg" 
+              src={logoUniversidad} 
               alt="Logo Universidad" 
-              className="h-24 md:h-28 w-auto object-contain"
+              className="h-12 md:h-14 w-auto object-contain"
             />
           </div>
 
