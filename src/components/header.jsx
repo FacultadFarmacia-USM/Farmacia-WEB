@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient'; // Asegura la ruta a tu cliente de Supabase
+import { supabase } from '../supabaseClient';
+import logoUniversidad from '../assets/logo-universidad.png';
 
 export default function Header({ perfil, cerrarSesion }) {
   
@@ -58,21 +59,8 @@ export default function Header({ perfil, cerrarSesion }) {
     }
   };
 
-  // URL de un Tubo de Ensayo en formato SVG (Estilo 3D moderno, súper seguro y rápido de cargar)
-  const tuboEnsayoSeguro = "https://api.iconify.design/fluent-emoji/test-tube.svg?width=128&height=128";
-
   return (
-    <header className="h-20 bg-surface text-on-surface border-b border-outline-variant flex items-center justify-between px-6 shadow-sm">
-      
-      {/* LADO IZQUIERDO: Buscador */}
-      <div className="flex items-center gap-3 bg-surface-container-high px-4 py-2 rounded-full w-full max-w-md border border-outline">
-        <span className="material-symbols-outlined text-on-surface-variant text-[20px]">search</span>
-        <input 
-          type="text" 
-          placeholder="Buscar estudiantes, expedientes, formularios..." 
-          className="bg-transparent border-none outline-none text-sm w-full text-on-surface placeholder-on-surface-variant"
-        />
-      </div>
+    <header className="h-20 bg-surface text-on-surface border-b border-outline-variant flex items-center justify-end px-6 shadow-sm">
 
       {/* LADO DERECHO: Perfil del usuario y botón de salir */}
       <div className="flex items-center gap-6">
@@ -127,12 +115,12 @@ export default function Header({ perfil, cerrarSesion }) {
         {/* Información del Docente / Admin Conectado */}
         <div className="flex items-center gap-3">
           
-          {/* AVATAR: Tubo de Ensayo SVG */}
-          <div className="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center border border-outline shadow-sm overflow-hidden transition-transform duration-300 hover:scale-105 p-2">
+          {/* AVATAR: Modificado para mostrar el Logo de la Universidad en lugar del tubo de ensayo */}
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border border-outline shadow-sm overflow-hidden transition-transform duration-300 hover:scale-105 p-1">
             <img 
-              src={tuboEnsayoSeguro} 
-              alt="Tubo de ensayo" 
-              className="w-full h-full object-contain drop-shadow-sm"
+              src={logoUniversidad} 
+              alt="Logo Universidad" 
+              className="w-full h-full object-contain"
             />
           </div>
           

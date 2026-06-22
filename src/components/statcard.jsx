@@ -1,9 +1,12 @@
+import React from 'react';
+
 export default function StatCard({ title, value, icon, colorTheme, info, progress }) {
   // Un pequeño mapeo para usar los colores correctos según la tarjeta
   const colorMap = {
     primary: "bg-primary text-primary group-hover:bg-primary-container group-hover:text-on-primary-container",
     secondary: "bg-secondary text-secondary group-hover:bg-secondary-container group-hover:text-on-secondary-container",
-    tertiary: "bg-surface-tint text-surface-tint group-hover:bg-surface-variant group-hover:text-surface-tint"
+    // Aquí está la corrección: ahora el fondo inicial es diferente al color del icono
+    tertiary: "bg-surface-variant text-surface-tint group-hover:bg-surface-tint group-hover:text-surface-container-lowest"
   };
 
   return (
