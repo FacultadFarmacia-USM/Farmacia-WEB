@@ -5,7 +5,7 @@ import Header from '../components/header';
 import ActivityTable from '../components/activitytable';
 import StatCard from '../components/statcard';
 import FloatingAssistant from '../components/floatingassistant';
-import FormsMenu from './formsMenu';
+import FormsMenu from './formsmenu';
 import RegistroEstudiantes from './RegistroEstudiantes'; 
 import Practicas1 from './Practicas1';
 import Practicas2 from './Practicas2'; 
