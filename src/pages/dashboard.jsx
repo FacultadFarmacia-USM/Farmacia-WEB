@@ -3,10 +3,9 @@ import { supabase } from '../supabaseClient';
 import Sidebar from '../components/sidebar';
 import Header from '../components/header';
 import ActivityTable from '../components/activitytable';
-// import QuickForms from '../components/quickforms'; <-- Ya no lo necesitamos aquí
 import StatCard from '../components/statcard';
 import FloatingAssistant from '../components/floatingassistant';
-import FormsMenu from './FormsMenu';
+import FormsMenu from './formsMenu';
 import RegistroEstudiantes from './RegistroEstudiantes'; 
 import Practicas1 from './Practicas1';
 import Practicas2 from './Practicas2'; 
