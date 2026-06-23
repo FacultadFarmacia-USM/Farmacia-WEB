@@ -1,0 +1,14 @@
+# Dependencias (Esto es lo que traba a Vercel, debe ignorarse)
+node_modules/
+
+# Archivos de entorno (Contraseñas de Supabase ¡NUNCA SUBIR!)
+.env
+.env.local
+.env.*
+
+# Archivos de compilación
+dist/
+dist-ssr/
+
+# Archivos del sistema
+.DS_Store
