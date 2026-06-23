@@ -24,6 +24,8 @@ const s = {
     minHeight:"100vh", background:"#f8f9ff", display:"flex",
     alignItems:"center", justifyContent:"center",
     fontFamily:"'Inter',sans-serif", position:"relative", overflow:"hidden",
+    padding: "20px 0",
+    boxSizing: "border-box"
   },
   blobTR: {
     position:"absolute", top:"-80px", right:"-80px",
@@ -38,7 +40,7 @@ const s = {
     pointerEvents:"none",
   },
   card: {
-    width:"100%", maxWidth:"440px", margin:"0 16px", position:"relative", zIndex:1,
+    width:"100%", maxWidth:"440px", position:"relative", zIndex:1,
     background:"#ffffff", borderRadius:"20px",
     border:"1px solid #c4c6cf",
     boxShadow:"0 8px 40px rgba(13,28,46,0.10),0 2px 8px rgba(13,28,46,0.06)",
@@ -149,7 +151,7 @@ export default function Login() {
     setSendingReset(true);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: RESET_REDIRECT_URL, // ← ruta exacta donde vive FormularioNuevaPassword
+        redirectTo: RESET_REDIRECT_URL,
       });
 
       if (resetError) throw resetError;
@@ -157,7 +159,6 @@ export default function Login() {
       setSuccessMsg("Enlace enviado. Revisa tu bandeja de entrada o carpeta de spam.");
     } catch (err) {
       console.error(err);
-      // Mostramos el mensaje real de Supabase para facilitar el diagnóstico
       setError(`No se pudo enviar el enlace: ${err.message}`);
     } finally {
       setSendingReset(false);
@@ -178,7 +179,7 @@ export default function Login() {
       </svg>
       <div style={s.blobTR}/><div style={s.blobBL}/>
 
-      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"440px",margin:"0 16px"}}>
+      <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:"440px", padding:"0 16px", boxSizing:"border-box"}}>
         <div style={s.card}>
 
           {/* Header */}
